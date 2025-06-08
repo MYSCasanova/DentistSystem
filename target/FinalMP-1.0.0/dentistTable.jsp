@@ -1,0 +1,525 @@
+<%@ page import = "java.util.*"%>
+<!-- need to import so we can use the arraylist -->
+<%
+    response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    session = request.getSession(false);
+    if (session == null || session.getAttribute("username") == null) {
+        response.sendRedirect("login.jsp"); 
+        return; 
+    }
+%>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dentist</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Additional styles for table responsiveness */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .table {
+            min-width: 100%;
+            white-space: nowrap;
+        }
+        .table th, .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background-color: #003366;
+            color: white;
+        }
+        .sort-button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 0;
+            font-weight: 600;
+        }
+        .sort-button:hover {
+            color: #d9ecff;
+        }
+    </style>
+  </head>
+  <body>
+      <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-3 col-12">
+                    <% 
+                        String role = (String)session.getAttribute("role");
+                        System.out.println(role);
+                        //ADMIN
+                        if("Admin".equals(role))
+                        {
+                            System.out.println("ADMIN CONNECTED");
+                    %>
+                    <nav class="nav flex-column bg-light p-3 rounded shadow-sm">
+                        <a class="nav-link active" aria-current="page" href="homeAdmin.jsp">Home</a>
+                        <a class="nav-link" href="UsersDisplayServlet">Users</a>
+                        <a class="nav-link" href="DentistDisplayServlet">Dentists</a>
+                        <a class="nav-link" href="PatientDisplayServlet">Patients</a>
+                        <a class="nav-link" href="AppointmentDisplayServlet">Appointments</a>
+                        <a class="nav-link" href="TreatmentDisplayServlet">Treatments</a>
+                        <a class="nav-link" href="LogsDisplayServlet">Logs</a>
+                        <a class="nav-link" href="LogoutServlet">Log Out</a>
+                    </nav>
+                    
+                    <%
+                        }else if("Employee".equals(role)){
+                    %>
+                    <nav class="nav flex-column bg-light p-3 rounded shadow-sm">
+                        <a class="nav-link active" aria-current="page" href="homeEmployee.jsp">Home</a>
+                        <a class="nav-link" href="PatientDisplayServlet">Patients</a>
+                        <a class="nav-link" href="AppointmentDisplayServlet">Appointments</a>
+                        <a class="nav-link" href="LogoutServlet">Log Out</a>
+                    </nav>
+                    
+                    <%
+                        }else if("Dentist".equals(role)){
+                    %>
+                    <nav class="nav flex-column bg-light p-3 rounded shadow-sm">
+                        <a class="nav-link active" aria-current="page" href="homeDentist.jsp">Home</a>
+                        <a class="nav-link" href="PatientDisplayServlet">Patients</a>
+                        <a class="nav-link" href="AppointmentDisplayServlet">Appointments</a>
+                        <a class="nav-link" href="TreatmentDisplayServlet">Treatments</a>
+                        <a class="nav-link" href="LogoutServlet">Log Out</a>
+                    </nav>
+                    <%
+                        }
+                    %>
+                </div>
+            <div class="col-md-9 col-12">
+                <!-- Content area -->
+                <div class="p-3 border rounded">
+                    <!-- Page-specific content gets loaded here when you navigate -->
+                    <div class="welcome-section mb-3">
+                        <h1 class="mb-0">DENTISTS</h1>
+                    </div>
+                    
+                    <div class="action-bar mb-3">
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addRecordModal">
+                                <i class="fas fa-plus"></i> Add Record
+                            </button>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editRecordModal">
+                                <i class="fas fa-edit"></i> Edit Record
+                            </button>
+                        </div>
+
+                        <form method="get" action="DentistDisplayServlet" class="search-form">
+                            <div class="input-group">
+                                <input type="text" name="search" class="form-control" placeholder="Search...">
+                                <button type="submit" name="sub" class="btn btn-success">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Add Record Modal -->
+                    <div class="modal fade" id="addRecordModal" tabindex="-1" aria-labelledby="addRecordModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title" id="addRecordModalLabel">
+                                        <i class="fas fa-user-md me-2"></i>Add New Dentist
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+
+                                <form action="DentistAddServlet" method="post">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="recordFullName" class="form-label fw-semibold">Full Name</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-user text-primary"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="recordFullName" name="fullname" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="recordContactInformation" class="form-label fw-semibold">Contact Information</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-phone text-primary"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="recordContactInformation" name="contact_information" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="recordSpecialization" class="form-label fw-semibold">Specialization</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-stethoscope text-primary"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="recordSpecialization" name="specialization" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="recordEmail" class="form-label fw-semibold">Email</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-envelope text-primary"></i>
+                                                </span>
+                                                <input type="email" class="form-control" id="recordEmail" name="email" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="recordUsername" class="form-label fw-semibold">Username</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-user-circle text-primary"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="recordUsername" name="username" required>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="recordPassword" class="form-label fw-semibold">Password</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-lock text-primary"></i>
+                                                </span>
+                                                <input type="password" class="form-control" id="recordPassword" name="password" required>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" name="role" value="dentist">
+                                    </div>
+
+                                    <div class="modal-footer border-top-0">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                            <i class="fas fa-times me-1"></i> Cancel
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Save Dentist
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    
+                    
+                    <%--
+                    <!-- Add Record Modal -->
+                    <div class="modal fade" id="addRecordModal" tabindex="-1" aria-labelledby="addRecordModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <form action="DentistAddServlet" method="post">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="addRecordModalLabel">Add New Dentist</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <!-- Fields in the exact required order -->
+                                        <div class="mb-3">
+                                            <label for="recordFullName" class="form-label">Full Name</label>
+                                            <input type="text" class="form-control" id="recordFullName" name="fullname" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="recordContactInformation" class="form-label">Contact Information</label>
+                                            <input type="text" class="form-control" id="recordContactInformation" name="contact_information" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="recordSpecialization" class="form-label">Specialization</label>
+                                            <input type="text" class="form-control" id="recordSpecialization" name="specialization" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="recordEmail" class="form-label">Email</label>
+                                            <input type="email" class="form-control" id="recordEmail" name="email" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="recordUsername" class="form-label">Username</label>
+                                            <input type="text" class="form-control" id="recordUsername" name="username" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="recordPassword" class="form-label">Password</label>
+                                            <input type="password" class="form-control" id="recordPassword" name="password" required>
+                                        </div>
+                                        <input type="hidden" name="role" value="dentist">
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Save Dentist</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div> --%>
+                    
+                    <%--
+                    <!-- Edit Record Modal -->
+                    <div class="modal fade" id="editRecordModal" tabindex="-1" aria-labelledby="editRecordModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <form action="DentistEditServlet" method="post">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editRecordModalLabel">Search the name you want to edit</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="fullname" class="form-label">Dentist Name</label>
+                                            <input type="text" class="form-control" id="fullname" name="fullname" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Search</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    --%>
+                    
+                    <!-- Edit Record Modal -->
+                    <div class="modal fade" id="editRecordModal" tabindex="-1" aria-labelledby="editRecordModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title" id="editRecordModalLabel">
+                                        <i class="fas fa-search me-2"></i>Search Dentist to Edit
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+
+                                <form action="DentistEditServlet" method="post">
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="dentistName" class="form-label fw-semibold">Dentist Name</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light">
+                                                    <i class="fas fa-user-md text-primary"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="dentistName" name="fullname" 
+                                                       placeholder="Enter dentist's full name" required>
+                                            </div>
+                                            <div class="form-text text-muted">
+                                                Enter the name of the dentist you want to edit
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer border-top-0">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                            <i class="fas fa-times me-1"></i> Cancel
+                                        </button>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search me-1"></i> Search Dentist
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <%
+                            //arraylist that will receive the request attribute records from the Display Servlet
+                            ArrayList <String[]> records = (ArrayList <String[]>) request.getAttribute("records");
+                        %>
+
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <%
+                                            String currentSortField = request.getParameter("sortField");
+                                            String currentSortOrder = request.getParameter("sortOrder");
+                                            boolean isThisColumnSorted = "dentist_id".equals(currentSortField);
+                                            String newSortOrder = "asc".equals(currentSortOrder) && isThisColumnSorted ? "desc" : "asc";
+                                            String caretClass = isThisColumnSorted ? ("asc".equals(currentSortOrder) ? "fa-caret-up" : "fa-caret-down") : "fa-caret-down";
+                                        %>
+
+                                        <form action="DentistDisplayServlet" method="get" style="display: inline;">
+                                            <input type="hidden" name="sortField" value="dentist_id">
+                                            <input type="hidden" name="sortOrder" value="<%= newSortOrder %>">
+                                            <button type="submit" class="sort-button">
+                                                Dentist ID <i class="fa <%= caretClass %>" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    </th>
+                                    <th>
+                                        <%
+                                            currentSortField = request.getParameter("sortField");
+                                            currentSortOrder = request.getParameter("sortOrder");
+                                            isThisColumnSorted = "dentist_name".equals(currentSortField);
+                                            newSortOrder = "asc".equals(currentSortOrder) && isThisColumnSorted ? "desc" : "asc";
+                                            caretClass = isThisColumnSorted ? ("asc".equals(currentSortOrder) ? "fa-caret-up" : "fa-caret-down") : "fa-caret-down";
+                                        %>
+
+                                        <form action="DentistDisplayServlet" method="get" style="display: inline;">
+                                            <input type="hidden" name="sortField" value="dentist_name">
+                                            <input type="hidden" name="sortOrder" value="<%= newSortOrder %>">
+                                            <button type="submit" class="sort-button">
+                                                Dentist Name <i class="fa <%= caretClass %>" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    </th>
+                                    <th>
+                                        <%
+                                            currentSortField = request.getParameter("sortField");
+                                            currentSortOrder = request.getParameter("sortOrder");
+                                            isThisColumnSorted = "specialization".equals(currentSortField);
+                                            newSortOrder = "asc".equals(currentSortOrder) && isThisColumnSorted ? "desc" : "asc";
+                                            caretClass = isThisColumnSorted ? ("asc".equals(currentSortOrder) ? "fa-caret-up" : "fa-caret-down") : "fa-caret-down";
+                                        %>
+
+                                        <form action="DentistDisplayServlet" method="get" style="display: inline;">
+                                            <input type="hidden" name="sortField" value="specialization">
+                                            <input type="hidden" name="sortOrder" value="<%= newSortOrder %>">
+                                            <button type="submit" class="sort-button">
+                                                Specialization <i class="fa <%= caretClass %>" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    </th>
+                                    <th>
+                                        <%
+                                            currentSortField = request.getParameter("sortField");
+                                            currentSortOrder = request.getParameter("sortOrder");
+                                            isThisColumnSorted = "contact_information".equals(currentSortField);
+                                            newSortOrder = "asc".equals(currentSortOrder) && isThisColumnSorted ? "desc" : "asc";
+                                            caretClass = isThisColumnSorted ? ("asc".equals(currentSortOrder) ? "fa-caret-up" : "fa-caret-down") : "fa-caret-down";
+                                        %>
+
+                                        <form action="DentistDisplayServlet" method="get" style="display: inline;">
+                                            <input type="hidden" name="sortField" value="contact_information">
+                                            <input type="hidden" name="sortOrder" value="<%= newSortOrder %>">
+                                            <button type="submit" class="sort-button">
+                                                Contact Information <i class="fa <%= caretClass %>" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <%
+                                    for(String[] field:records){
+                                %>
+                                <tr>
+                                    <td><%= field[0] %></td>
+                                    <td><%= field[1] %></td>
+                                    <td><%= field[2] %></td>
+                                    <td><%= field[3] %></td>
+                                </tr>
+                                <%
+                                    }
+                                %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+      
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+     
+    <!-- Custom Alert Modal -->
+    <div id="alertModalOverlay" class="alert-modal-overlay"></div>
+    <div id="alertModal" class="alert-modal">
+        <div class="alert-modal-icon">
+            <i id="alertModalIcon" class="fas"></i>
+        </div>
+        <h3 id="alertModalTitle" class="alert-modal-title"></h3>
+        <p id="alertModalMessage" class="alert-modal-message"></p>
+        <button id="alertModalBtn" class="alert-modal-btn">OK</button>
+    </div>
+        <script>
+        // Custom alert function
+        function showAlert(type, title, message, redirectUrl) {
+            const modal = document.getElementById('alertModal');
+            const overlay = document.getElementById('alertModalOverlay');
+            const icon = document.getElementById('alertModalIcon');
+            const modalTitle = document.getElementById('alertModalTitle');
+            const modalMessage = document.getElementById('alertModalMessage');
+            const btn = document.getElementById('alertModalBtn');
+
+            // Set modal content based on type
+            if (type === 'success') {
+                modal.classList.add('alert-modal-success');
+                modal.classList.remove('alert-modal-error');
+                icon.className = 'fas fa-check-circle';
+            } else {
+                modal.classList.add('alert-modal-error');
+                modal.classList.remove('alert-modal-success');
+                icon.className = 'fas fa-exclamation-circle';
+            }
+
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+
+            // Show modal
+            modal.style.display = 'block';
+            overlay.style.display = 'block';
+
+            // Button click handler
+            btn.onclick = function() {
+                modal.style.display = 'none';
+                overlay.style.display = 'none';
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                }
+            };
+
+            // Close when clicking overlay
+            overlay.onclick = function() {
+                modal.style.display = 'none';
+                overlay.style.display = 'none';
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                }
+            };
+        }
+
+        // Function to check for URL parameters and show alerts
+        function checkForAlerts() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const alertType = urlParams.get('alert');
+            const alertMessage = urlParams.get('message');
+
+            if (alertType && alertMessage) {
+                let title = '';
+                if (alertType === 'success') {
+                    title = 'Success!';
+                } else {
+                    title = 'Error!';
+                }
+
+                showAlert(alertType, title, alertMessage, 'DentistDisplayServlet');
+
+                // Clean up URL
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', checkForAlerts);
+    </script>
+  
+  </body>
+</html>
